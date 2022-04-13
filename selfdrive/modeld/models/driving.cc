@@ -39,6 +39,7 @@ void model_init(ModelState* s, cl_device_id device_id, cl_context context) {
   s->m = std::make_unique<SNPEModel>("../../models/supercombo.dlc",
 #endif
    &s->output[0], NET_OUTPUT_SIZE, USE_GPU_RUNTIME, true);
+   LOGW("Made model runner");
 
 #ifdef TEMPORAL
   s->m->addRecurrent(&s->output[OUTPUT_SIZE], TEMPORAL_SIZE);
@@ -57,6 +58,7 @@ void model_init(ModelState* s, cl_device_id device_id, cl_context context) {
 
 ModelOutput* model_eval_frame(ModelState* s, VisionBuf* buf, VisionBuf* wbuf,
                               const mat3 &transform, const mat3 &transform_wide, float *desire_in) {
+  LOGW("start model_eval_frame");
 #ifdef DESIRE
   if (desire_in != NULL) {
     for (int i = 1; i < DESIRE_LEN; i++) {
@@ -75,15 +77,15 @@ ModelOutput* model_eval_frame(ModelState* s, VisionBuf* buf, VisionBuf* wbuf,
   // if getInputBuf is not NULL, net_input_buf will be
   auto net_input_buf = s->frame->prepare(buf->buf_cl, buf->width, buf->height, transform, static_cast<cl_mem*>(s->m->getInputBuf()));
   s->m->addImage(net_input_buf, s->frame->buf_size);
-  LOGT("Image added");
+  LOGW("Image added");
 
   if (wbuf != nullptr) {
     auto net_extra_buf = s->wide_frame->prepare(wbuf->buf_cl, wbuf->width, wbuf->height, transform_wide, static_cast<cl_mem*>(s->m->getExtraBuf()));
     s->m->addExtra(net_extra_buf, s->wide_frame->buf_size);
-    LOGT("Extra image added");
+    LOGW("Extra image added");
   }
   s->m->execute();
-  LOGT("Execution finished");
+  LOGW("Execution finished");
 
   return (ModelOutput*)&s->output;
 }

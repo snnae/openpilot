@@ -6,6 +6,7 @@ from tqdm import tqdm
 import argparse
 # run DM procs
 os.environ["USE_WEBCAM"] = "1"
+os.environ['FILEREADER_CACHE'] = '1'
 
 import cereal.messaging as messaging
 from cereal.services import service_list
@@ -141,6 +142,7 @@ def replay_cameras(lr, frs):
       pm.send(s, m)
 
       vipc_server.send(stream, img, msg.frameId, msg.timestampSof, msg.timestampEof)
+      # print('Sent NOW')
 
   init_data = [m for m in lr if m.which() == 'initData'][0]
   cameras = tici_cameras if (init_data.initData.deviceType == 'tici') else eon_cameras
@@ -155,7 +157,8 @@ def replay_cameras(lr, frs):
     if fr is not None:
       print(f"Decomressing frames {s}")
       frames = []
-      for i in tqdm(range(fr.frame_count)):
+      # for i in tqdm(range(fr.frame_count)):
+      for i in tqdm(range(15*20)):
         img = fr.get(i, pix_fmt='yuv420p')[0]
         frames.append(img.flatten().tobytes())
 
@@ -219,13 +222,18 @@ def regen_segment(lr, frs=None, outdir=FAKEDATA):
     ],
   }
 
+  for procs in fake_daemons.values():
+    for p in procs:
+      p.start()
+  time.sleep(5)
+
   try:
     # start procs up
     ignore = list(fake_daemons.keys()) + ['ui', 'manage_athenad', 'uploader']
     ensure_running(managed_processes.values(), started=True, not_run=ignore)
-    for procs in fake_daemons.values():
-      for p in procs:
-        p.start()
+    # for procs in fake_daemons.values():
+    #   for p in procs:
+    #     p.start()
 
     for _ in tqdm(range(60)):
       # ensure all procs are running

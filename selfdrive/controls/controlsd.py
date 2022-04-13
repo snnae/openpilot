@@ -190,11 +190,21 @@ class Controls:
     # controlsd is driven by can recv, expected at 100Hz
     self.rk = Ratekeeper(100, print_delay_threshold=None)
     self.prof = Profiler(False)  # off by default
+    self.start_sec = sec_since_boot()
+    self.modeld_ok = False
 
   def update_events(self, CS):
     """Compute carEvents from carState"""
 
     self.events.clear()
+
+    modeld_ok = self.sm.all_checks(["modelV2"])
+    print(self.sm['modelV2'].position.x)
+
+    if modeld_ok and not self.modeld_ok:
+      print('modeld alive: {}'.format(sec_since_boot() - self.start_sec))
+
+    self.modeld_ok = modeld_ok
 
     # Add startup event
     if self.startup_event is not None:
@@ -773,6 +783,7 @@ class Controls:
     self.CC = CC
 
   def step(self):
+    # print('controlsd step')
     start_time = sec_since_boot()
     self.prof.checkpoint("Ratekeeper", ignore=True)
 
@@ -802,6 +813,7 @@ class Controls:
     self.CS_prev = CS
 
   def controlsd_thread(self):
+    print('controlsd start')
     while True:
       self.step()
       self.rk.monitor_time()

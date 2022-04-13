@@ -80,10 +80,13 @@ void run_model(ModelState &model, VisionIpcClient &vipc_client_main, VisionIpcCl
 
   while (!do_exit) {
     // Keep receiving frames until we are at least 1 frame ahead of previous extra frame
+    LOGW("Before ts");
     while (get_ts(meta_main) < get_ts(meta_extra) + 25000000ULL) {
+      LOGW("In ts");
       buf_main = vipc_client_main.recv(&meta_main);
       if (buf_main == nullptr)  break;
     }
+    LOGW("Running ts");
 
     if (buf_main == nullptr) {
       LOGE("vipc_client_main no frame");
@@ -107,15 +110,20 @@ void run_model(ModelState &model, VisionIpcClient &vipc_client_main, VisionIpcCl
           meta_extra.frame_id, double(meta_extra.timestamp_sof) / 1e9);
       }
     } else {
+      LOGW("Using single camera");
       // Use single camera
       buf_extra = buf_main;
       meta_extra = meta_main;
+      LOGW("Using single camera2");
     }
 
     // TODO: path planner timeout?
+    LOGW("sm update");
     sm.update(0);
+    LOGW("sm update after");
     int desire = ((int)sm["lateralPlan"].getLateralPlan().getDesire());
     frame_id = sm["roadCameraState"].getRoadCameraState().getFrameId();
+    LOGW("got frame id");
     if (sm.updated("liveCalibration")) {
       auto extrinsic_matrix = sm["liveCalibration"].getLiveCalibration().getExtrinsicMatrix();
       Eigen::Matrix<float, 3, 4> extrinsic_matrix_eigen;
@@ -127,16 +135,19 @@ void run_model(ModelState &model, VisionIpcClient &vipc_client_main, VisionIpcCl
       model_transform_extra = update_calibration(extrinsic_matrix_eigen, Hardware::TICI(), true);
       live_calib_seen = true;
     }
+    LOGW("after liveCalibration");
 
     float vec_desire[DESIRE_LEN] = {0};
     if (desire >= 0 && desire < DESIRE_LEN) {
       vec_desire[desire] = 1.0;
     }
 
+    LOGW("model eval frame");
     double mt1 = millis_since_boot();
     ModelOutput *model_output = model_eval_frame(&model, buf_main, buf_extra, model_transform_main, model_transform_extra, vec_desire);
     double mt2 = millis_since_boot();
     float model_execution_time = (mt2 - mt1) / 1000.0;
+    LOGW("model execution time: %f", model_execution_time);
 
     // tracked dropped frames
     uint32_t vipc_dropped_frames = meta_main.frame_id - last_vipc_frame_id - 1;
@@ -146,9 +157,11 @@ void run_model(ModelState &model, VisionIpcClient &vipc_client_main, VisionIpcCl
       frames_dropped = 0.;
     }
     run_count++;
+    LOGW("track dropped frames");
 
     float frame_drop_ratio = frames_dropped / (1 + frames_dropped);
 
+    LOGW("Publishing modelV2!");
     model_publish(pm, meta_main.frame_id, meta_extra.frame_id, frame_id, frame_drop_ratio, *model_output, meta_main.timestamp_eof, model_execution_time,
                   kj::ArrayPtr<const float>(model.output.data(), model.output.size()), live_calib_seen);
     posenet_publish(pm, meta_main.frame_id, vipc_dropped_frames, *model_output, meta_main.timestamp_eof, live_calib_seen);
@@ -160,6 +173,7 @@ void run_model(ModelState &model, VisionIpcClient &vipc_client_main, VisionIpcCl
 }
 
 int main(int argc, char **argv) {
+  LOGW("Start modeld");
   if (!Hardware::PC()) {
     int ret;
     ret = util::set_realtime_priority(54);
@@ -170,10 +184,12 @@ int main(int argc, char **argv) {
 
   bool main_wide_camera = Hardware::TICI() ? Params().getBool("EnableWideCamera") : false;
   bool use_extra_client = Hardware::TICI() && !main_wide_camera;
+  LOGW("Got cam info");
 
   // cl init
   cl_device_id device_id = cl_get_device_id(CL_DEVICE_TYPE_DEFAULT);
   cl_context context = CL_CHECK_ERR(clCreateContext(NULL, 1, &device_id, NULL, NULL, &err));
+  LOGW("Cl init");
 
   // init the models
   ModelState model;
@@ -182,6 +198,7 @@ int main(int argc, char **argv) {
 
   VisionIpcClient vipc_client_main = VisionIpcClient("camerad", main_wide_camera ? VISION_STREAM_WIDE_ROAD : VISION_STREAM_ROAD, true, device_id, context);
   VisionIpcClient vipc_client_extra = VisionIpcClient("camerad", VISION_STREAM_WIDE_ROAD, false, device_id, context);
+  LOGW("Made vision ipc");
 
   while (!do_exit && !vipc_client_main.connect(false)) {
     util::sleep_for(100);
@@ -190,6 +207,7 @@ int main(int argc, char **argv) {
   while (!do_exit && use_extra_client && !vipc_client_extra.connect(false)) {
     util::sleep_for(100);
   }
+  LOGW("Connected vision ipc!");
 
   // run the models
   // vipc_client.connected is false only when do_exit is true

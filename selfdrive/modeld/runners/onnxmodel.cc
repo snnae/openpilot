@@ -15,7 +15,7 @@
 #include "selfdrive/common/util.h"
 
 ONNXModel::ONNXModel(const char *path, float *_output, size_t _output_size, int runtime, bool _use_extra) {
-  LOGD("loading model %s", path);
+  LOGE("loading model %s", path);
 
   output = _output;
   output_size = _output_size;
@@ -31,7 +31,7 @@ ONNXModel::ONNXModel(const char *path, float *_output, size_t _output_size, int 
 
   proc_pid = fork();
   if (proc_pid == 0) {
-    LOGD("spawning onnx process %s", onnx_runner.c_str());
+    LOGW("spawning onnx process %s, model: %s", onnx_runner.c_str(), path);
     char *argv[] = {(char*)onnx_runner.c_str(), (char*)path, nullptr};
     dup2(pipein[0], 0);
     dup2(pipeout[1], 1);
@@ -41,10 +41,14 @@ ONNXModel::ONNXModel(const char *path, float *_output, size_t _output_size, int 
     close(pipeout[1]);
     execvp(onnx_runner.c_str(), argv);
   }
+  LOGW("spawned process!");
 
   // parent
   close(pipein[0]);
+  LOGW("parent1");
   close(pipeout[1]);
+  LOGW("parent2");
+//  sleep(5);
 }
 
 ONNXModel::~ONNXModel() {
@@ -117,24 +121,31 @@ void ONNXModel::addExtra(float *image_buf, int buf_size) {
 
 void ONNXModel::execute() {
   // order must be this
+  LOGW("Starting execute");
   if (image_input_buf != NULL) {
     pwrite(image_input_buf, image_buf_size);
   }
+  LOGW("pwrite1");
   if (extra_input_buf != NULL) {
     pwrite(extra_input_buf, extra_buf_size);
   }
+  LOGW("pwrite2");
   if (desire_input_buf != NULL) {
     pwrite(desire_input_buf, desire_state_size);
   }
+  LOGW("pwrite3");
   if (traffic_convention_input_buf != NULL) {
     pwrite(traffic_convention_input_buf, traffic_convention_size);
   }
+  LOGW("pwrite4");
   if (calib_input_buf != NULL) {
     pwrite(calib_input_buf, calib_size);
   }
+  LOGW("pwrite5");
   if (rnn_input_buf != NULL) {
     pwrite(rnn_input_buf, rnn_state_size);
   }
+  LOGW("Waiting for output");
   pread(output, output_size);
 }
 
