@@ -1195,12 +1195,12 @@ location set</source>
     <message>
         <location filename="../qt/offroad/settings.cc" line="64"/>
         <source>🌮 End-to-end longitudinal (extremely alpha) 🌮</source>
-        <translation type="unfinished"></translation>
+        <translation>🌮 端到端縱向控制 (實用性功能) 🌮</translation>
     </message>
     <message>
         <location filename="../qt/offroad/settings.cc" line="65"/>
         <source>Let the driving model control the gas and brakes, openpilot will drive as it thinks a human would. Super experimental.</source>
-        <translation type="unfinished"></translation>
+        <translation>讓駕駛模型控制油門和剎車，openpilot 會像人類的駕駛習慣一樣駕駛。實驗性功能請小心使用。</translation>
     </message>
     <message>
         <location filename="../qt/offroad/settings.cc" line="58"/>
