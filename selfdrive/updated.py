@@ -377,6 +377,10 @@ def main() -> None:
     cloudlog.warning("updates are disabled by the DisableUpdates param")
     exit(0)
 
+  if EON and "letv" not in open("/proc/cmdline").read():
+    cloudlog.warning("updates are disabled due to device deprecation")
+    exit(0)
+
   ov_lock_fd = open(LOCK_FILE, 'w')
   try:
     fcntl.flock(ov_lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)

@@ -16,9 +16,9 @@
 #include <set>
 
 #include "cereal/messaging/messaging.h"
-#include "selfdrive/common/swaglog.h"
-#include "selfdrive/common/timing.h"
-#include "selfdrive/common/util.h"
+#include "common/swaglog.h"
+#include "common/timing.h"
+#include "common/util.h"
 
 // ACCELEROMETER_UNCALIBRATED is only in Android O
 // https://developer.android.com/reference/android/hardware/Sensor.html#STRING_TYPE_ACCELEROMETER_UNCALIBRATED
