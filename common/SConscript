@@ -1,4 +1,4 @@
-Import('env', 'arch', 'SHARED')
+Import('env', 'envCython', 'arch', 'SHARED')
 
 if SHARED:
   fxn = env.SharedLibrary
@@ -14,6 +14,9 @@ common_libs = [
   'i2c.cc',
   'watchdog.cc',
 ]
+
+if arch != "Darwin":
+  common_libs.append('gpio.cc')
 
 _common = fxn('common', common_libs, LIBS="json11")
 
@@ -35,3 +38,7 @@ Export('_common', '_gpucommon', '_gpu_libs')
 if GetOption('test'):
   env.Program('tests/test_util', ['tests/test_util.cc'], LIBS=[_common])
   env.Program('tests/test_swaglog', ['tests/test_swaglog.cc'], LIBS=[_common, 'json11', 'zmq', 'pthread'])
+
+# Cython
+envCython.Program('clock.so', 'clock.pyx')
+envCython.Program('params_pyx.so', 'params_pyx.pyx', LIBS=envCython['LIBS'] + [_common, 'zmq', 'json11'])
