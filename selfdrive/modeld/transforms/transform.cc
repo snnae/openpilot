@@ -3,7 +3,7 @@
 #include <cassert>
 #include <cstring>
 
-#include "selfdrive/common/clutil.h"
+#include "common/clutil.h"
 
 void transform_init(Transform* s, cl_context ctx, cl_device_id device_id) {
   memset(s, 0, sizeof(*s));
@@ -84,7 +84,7 @@ void transform_queue(Transform* s,
   CL_CHECK(clSetKernelArg(s->krnl, 8, sizeof(cl_int), &out_uv_height));
   CL_CHECK(clSetKernelArg(s->krnl, 9, sizeof(cl_int), &out_uv_width));
   CL_CHECK(clSetKernelArg(s->krnl, 10, sizeof(cl_mem), &s->m_uv_cl));
-  
+
   CL_CHECK(clEnqueueNDRangeKernel(q, s->krnl, 2, NULL,
                               (const size_t*)&work_size_uv, NULL, 0, 0, NULL));
   CL_CHECK(clSetKernelArg(s->krnl, 2, sizeof(cl_int), &in_v_offset));

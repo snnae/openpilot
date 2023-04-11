@@ -7,7 +7,7 @@
 #include <gui/SurfaceComposerClient.h>
 #include <hardware/hwcomposer_defs.h>
 
-#include "selfdrive/common/util.h"
+#include "common/util.h"
 #include "selfdrive/hardware/base.h"
 
 class HardwareEon : public HardwareNone {

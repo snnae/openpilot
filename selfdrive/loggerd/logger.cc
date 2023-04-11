@@ -18,9 +18,9 @@
 #include <cutils/properties.h>
 #endif
 
-#include "selfdrive/common/params.h"
-#include "selfdrive/common/swaglog.h"
-#include "selfdrive/common/version.h"
+#include "common/params.h"
+#include "common/swaglog.h"
+#include "common/version.h"
 
 // ***** logging helpers *****
 

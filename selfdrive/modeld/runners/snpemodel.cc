@@ -6,7 +6,7 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "selfdrive/common/util.h"
+#include "common/util.h"
 
 void PrintErrorStringAndExit() {
   std::cerr << zdl::DlSystem::getLastErrorString() << std::endl;

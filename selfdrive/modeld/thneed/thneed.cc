@@ -9,8 +9,8 @@
 #include <map>
 #include <string>
 
-#include "selfdrive/common/clutil.h"
-#include "selfdrive/common/timing.h"
+#include "common/clutil.h"
+#include "common/timing.h"
 //#define RUN_DISASSEMBLER
 //#define RUN_OPTIMIZER
 

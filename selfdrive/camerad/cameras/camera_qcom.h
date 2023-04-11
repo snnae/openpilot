@@ -12,8 +12,8 @@
 #include "selfdrive/camerad/include/msmb_camera.h"
 #include "selfdrive/camerad/include/msmb_isp.h"
 #include "selfdrive/camerad/include/msmb_ispif.h"
-#include "selfdrive/common/mat.h"
-#include "selfdrive/common/util.h"
+#include "common/mat.h"
+#include "common/util.h"
 
 #define FRAME_BUF_COUNT 4
 #define METADATA_BUF_COUNT 4

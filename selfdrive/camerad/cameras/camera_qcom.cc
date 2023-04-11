@@ -19,11 +19,11 @@
 #include "selfdrive/camerad/include/msmb_camera.h"
 #include "selfdrive/camerad/include/msmb_isp.h"
 #include "selfdrive/camerad/include/msmb_ispif.h"
-#include "selfdrive/common/clutil.h"
-#include "selfdrive/common/params.h"
-#include "selfdrive/common/swaglog.h"
-#include "selfdrive/common/timing.h"
-#include "selfdrive/common/util.h"
+#include "common/clutil.h"
+#include "common/params.h"
+#include "common/swaglog.h"
+#include "common/timing.h"
+#include "common/util.h"
 
 extern ExitHandler do_exit;
 
