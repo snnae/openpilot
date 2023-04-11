@@ -1341,7 +1341,7 @@ void cameras_open(MultiCameraState *s) {
   s->v4l_fd = HANDLE_EINTR(open("/dev/video0", O_RDWR | O_NONBLOCK));
   assert(s->v4l_fd >= 0);
 
-  s->ispif_fd = open_v4l_by_name_and_index("msm_ispif");
+  s->ispif_fd = HANDLE_EINTR(open("/dev/v4l-subdev15", O_RDWR | O_NONBLOCK));
   assert(s->ispif_fd >= 0);
 
   // ISPIF: stop
@@ -1568,7 +1568,7 @@ void process_driver_camera(MultiCameraState *s, CameraState *c, int cnt) {
   MessageBuilder msg;
   auto framed = msg.initEvent().initDriverCameraState();
   framed.setFrameType(cereal::FrameData::FrameType::FRONT);
-  fill_frame_data(framed, c->buf.cur_frame_data, c);
+  fill_frame_data(framed, c->buf.cur_frame_data);
   if (env_send_driver) {
     framed.setImage(get_frame_image(&c->buf));
   }
