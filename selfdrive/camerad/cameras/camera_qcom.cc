@@ -697,6 +697,8 @@ static void sensors_init(MultiCameraState *s) {
 }
 
 static void camera_open(CameraState *s, bool is_road_cam) {
+  int err;
+
   struct csid_cfg_data csid_cfg_data = {};
   struct v4l2_event_subscription sub = {};
 
@@ -767,7 +769,7 @@ static void camera_open(CameraState *s, bool is_road_cam) {
   struct msm_camera_csi_lane_params csi_lane_params = {0};
   csi_lane_params.csi_lane_mask = 0x1f;
   csiphy_cfg_data csiphy_cfg_data = { .cfg.csi_lane_params = &csi_lane_params, .cfgtype = CSIPHY_RELEASE};
-  int err = cam_ioctl(s->csiphy_fd, VIDIOC_MSM_CSIPHY_IO_CFG, &csiphy_cfg_data, "release csiphy");
+  err = cam_ioctl(s->csiphy_fd, VIDIOC_MSM_CSIPHY_IO_CFG, &csiphy_cfg_data, "release csiphy");
 
   // CSID: release csid
   csid_cfg_data.cfgtype = CSID_RELEASE;
@@ -812,9 +814,7 @@ static void camera_open(CameraState *s, bool is_road_cam) {
   // **** GO GO GO ****
   LOG("******************** GO GO GO ************************");
 
-  if (s->device != DEVICE_LP3) {
-    s->eeprom = get_eeprom(s->eeprom_fd, &s->eeprom_size);
-  }
+  s->eeprom = get_eeprom(s->eeprom_fd, &s->eeprom_size);
 
   // CSID: init csid
   csid_cfg_data.cfgtype = CSID_INIT;
@@ -845,7 +845,7 @@ static void camera_open(CameraState *s, bool is_road_cam) {
   // SENSOR: send i2c configuration
   if (s->camera_id == CAMERA_ID_IMX298) {
     err = sensor_write_regs(s, init_array_imx298, std::size(init_array_imx298), MSM_CAMERA_I2C_BYTE_DATA);
-  } else if (s->camera_id == CAMERA_ID_S5K3P8SP) {
+  } else if  (s->camera_id == CAMERA_ID_S5K3P8SP) {
     err = sensor_write_regs(s, init_array_s5k3p8sp, std::size(init_array_s5k3p8sp), MSM_CAMERA_I2C_WORD_DATA);
   } else if (s->camera_id == CAMERA_ID_IMX179) {
     err = sensor_write_regs(s, init_array_imx179, std::size(init_array_imx179), MSM_CAMERA_I2C_BYTE_DATA);
@@ -1295,6 +1295,7 @@ static void do_autofocus(CameraState *s) {
 
   // stay off the walls
   lens_true_pos = std::clamp(lens_true_pos, float(dac_down), float(dac_up));
+  //int target = std::clamp(lens_true_pos, float(dac_down), float(dac_up));
   s->lens_true_pos.store(lens_true_pos);
   actuator_move(s, lens_true_pos);
 }
@@ -1341,7 +1342,11 @@ void cameras_open(MultiCameraState *s) {
   s->v4l_fd = HANDLE_EINTR(open("/dev/video0", O_RDWR | O_NONBLOCK));
   assert(s->v4l_fd >= 0);
 
-  s->ispif_fd = HANDLE_EINTR(open("/dev/v4l-subdev15", O_RDWR | O_NONBLOCK));
+  if (s->device == DEVICE_LP3) {
+    s->ispif_fd = HANDLE_EINTR(open("/dev/v4l-subdev15", O_RDWR | O_NONBLOCK));
+  } else {
+    s->ispif_fd = HANDLE_EINTR(open("/dev/v4l-subdev16", O_RDWR | O_NONBLOCK));
+  }
   assert(s->ispif_fd >= 0);
 
   // ISPIF: stop
@@ -1524,64 +1529,11 @@ void process_road_camera(MultiCameraState *s, CameraState *c, int cnt) {
   }
 }
 
-static void driver_cam_auto_exposure(CameraState *c, SubMaster &sm) {
-  static const bool is_rhd = Params().getBool("IsRhdDetected");
-  struct ExpRect {int x1, x2, x_skip, y1, y2, y_skip;};
-  const CameraBuf *b = &c->buf;
-
-  int x_offset = 0, y_offset = 0;
-  int frame_width = b->rgb_width, frame_height = b->rgb_height;
-
-
-  ExpRect def_rect;
-  if (Hardware::TICI()) {
-    x_offset = 630, y_offset = 156;
-    frame_width = 668, frame_height = frame_width / 1.33;
-    def_rect = {96, 1832, 2, 242, 1148, 4};
-  } else {
-    def_rect = {is_rhd ? 0 : b->rgb_width * 3 / 5, is_rhd ? b->rgb_width * 2 / 5 : b->rgb_width, 2,
-                b->rgb_height / 3, b->rgb_height, 1};
-  }
-
-  static ExpRect rect = def_rect;
-  // use driver face crop for AE
-  if (Hardware::EON() && sm.updated("driverState")) {
-    if (auto state = sm["driverState"].getDriverState(); state.getFaceProb() > 0.4) {
-      auto face_position = state.getFacePosition();
-      int x = is_rhd ? 0 : frame_width - (0.5 * frame_height);
-      x += (face_position[0] * (is_rhd ? -1.0 : 1.0) + 0.5) * (0.5 * frame_height) + x_offset;
-      int y = (face_position[1] + 0.5) * frame_height + y_offset;
-      rect = {std::max(0, x - 72), std::min(b->rgb_width - 1, x + 72), 2,
-              std::max(0, y - 72), std::min(b->rgb_height - 1, y + 72), 1};
-    }
-  }
-
-  camera_autoexposure(c, set_exposure_target(b, rect.x1, rect.x2, rect.x_skip, rect.y1, rect.y2, rect.y_skip));
-}
-
-void process_driver_camera(MultiCameraState *s, CameraState *c, int cnt) {
-  int j = Hardware::TICI() ? 1 : 3;
-  if (cnt % j == 0) {
-    s->sm->update(0);
-    driver_cam_auto_exposure(c, *(s->sm));
-  }
-  MessageBuilder msg;
-  auto framed = msg.initEvent().initDriverCameraState();
-  framed.setFrameType(cereal::FrameData::FrameType::FRONT);
-  fill_frame_data(framed, c->buf.cur_frame_data);
-  if (env_send_driver) {
-    framed.setImage(get_frame_image(&c->buf));
-  }
-  s->pm->send("driverCameraState", msg);
-}
-
-
-
 void cameras_run(MultiCameraState *s) {
   std::vector<std::thread> threads;
   threads.push_back(std::thread(ops_thread, s));
   threads.push_back(start_process_thread(s, &s->road_cam, process_road_camera));
-  threads.push_back(start_process_thread(s, &s->driver_cam, process_driver_camera));
+  threads.push_back(start_process_thread(s, &s->driver_cam, common_process_driver_camera));
 
   CameraState* cameras[2] = {&s->road_cam, &s->driver_cam};
 
