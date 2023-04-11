@@ -61,11 +61,11 @@ class TestParams(unittest.TestCase):
 
   def test_delete_not_there(self):
     assert self.params.get("CarParams") is None
-    self.params.delete("CarParams")
+    self.params.remove("CarParams")
     assert self.params.get("CarParams") is None
 
   def test_get_bool(self):
-    self.params.delete("IsMetric")
+    self.params.remove("IsMetric")
     self.assertFalse(self.params.get_bool("IsMetric"))
 
     self.params.put_bool("IsMetric", True)
