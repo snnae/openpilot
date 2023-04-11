@@ -2,6 +2,7 @@
 
 #include <map>
 #include <string>
+#include <vector>
 
 enum ParamKeyType {
   PERSISTENT = 0x02,
@@ -15,10 +16,11 @@ enum ParamKeyType {
 class Params {
 public:
   Params(const std::string &path = {});
+  std::vector<std::string> allKeys() const;
   bool checkKey(const std::string &key);
   ParamKeyType getKeyType(const std::string &key);
   inline std::string getParamPath(const std::string &key = {}) {
-    return key.empty() ? params_path + "/d" : params_path + "/d/" + key;
+    return params_path + prefix + (key.empty() ? "" : "/" + key);
   }
 
   // Delete a value
@@ -27,8 +29,8 @@ public:
 
   // helpers for reading values
   std::string get(const std::string &key, bool block = false);
-  inline bool getBool(const std::string &key) {
-    return get(key) == "1";
+  inline bool getBool(const std::string &key, bool block = false) {
+    return get(key, block) == "1";
   }
   std::map<std::string, std::string> readAll();
 
@@ -43,4 +45,5 @@ public:
 
 private:
   std::string params_path;
+  std::string prefix;
 };
